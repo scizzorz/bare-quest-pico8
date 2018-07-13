@@ -267,7 +267,7 @@ camera_x, camera_y = 0, 0
 function world()
   local hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
   hero.x = 60
-  hero.y = 60
+  hero.y = 188
   hero:set_anim("walk_down")
   hero.dir = "down"
 
