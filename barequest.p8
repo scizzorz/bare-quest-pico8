@@ -323,6 +323,8 @@ function world()
       map(0, 0, 0, 0, 128, 64)
       tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
 
+      tprint(flr(stat(1) * 100) .. '%', camera_x + 16, camera_y + 1, c_white, c_black)
+
       hero:draw()
 
       for splosion in all(splosions) do
