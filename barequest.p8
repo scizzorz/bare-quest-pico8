@@ -1,9 +1,15 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
+
 -- helpers
 function flr8(v)
   return flr(v / 8)
+end
+
+function check_collision(x, y)
+  local cell_n = mget(flr8(x), flr8(y))
+  return fget(cell_n, flag_collision)
 end
 
 -->8
@@ -198,10 +204,52 @@ function _sprite:set_anim(to)
   end
 end
 
-function check_collision(x, y)
-  local cell_n = mget(flr8(x), flr8(y))
-  return fget(cell_n, flag_collision)
+function _splosion(sx, sy, tile, trans)
+  local particles = {}
+  local bx = (tile % 16) * 8
+  local by = flr(tile / 16) * 8
+  for x=0, 7 do
+    for y=0, 7 do
+      local c = sget(bx + x, by + y)
+      if c ~= trans then
+        add(particles, {
+          x=x,
+          y=y,
+          dx=rnd(6) - 3,
+          dy=rnd(6) - 3,
+          c=c,
+        })
+      end
+    end
+  end
+
+  return {
+    draw = function()
+      for ptcl in all(particles) do
+        pset(sx + ptcl.x, sy + ptcl.y, ptcl.c)
+
+        if check_collision(sx + ptcl.x + ptcl.dx, sy + ptcl.y) then
+          ptcl.dx *= -1
+        end
+        if check_collision(sx + ptcl.x, sy + ptcl.y + ptcl.dy) then
+          ptcl.dy *= -1
+        end
+
+        ptcl.x += ptcl.dx
+        ptcl.y += ptcl.dy
+        ptcl.dx *= 0.9
+        ptcl.dy *= 0.9
+
+        if (abs(ptcl.dx) < 0.1 and abs(ptcl.dy) < 0.1) then
+          del(particles, ptcl)
+        end
+      end
+    end,
+  }
 end
+
+-->8
+-- gameplay
 
 hero_anims = {
   idle_down = 72,
@@ -222,6 +270,8 @@ function world()
   hero.y = 60
   hero:set_anim("walk_down")
   hero.dir = "down"
+
+  local splosions = {}
 
   return {
     update = function()
@@ -253,8 +303,12 @@ function world()
         hero:set_anim("idle_" .. hero.dir)
       end
 
-      if btnp(4) or btnp(5) then
+      if btnp(4) then
         game.push(menu())
+      end
+
+      if btnp(5) then
+        add(splosions, _splosion(hero.x, hero.y, hero.tile, c_red))
       end
 
       hero:update()
@@ -270,6 +324,10 @@ function world()
       tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
 
       hero:draw()
+
+      for splosion in all(splosions) do
+        splosion:draw()
+      end
     end,
   }
 end
