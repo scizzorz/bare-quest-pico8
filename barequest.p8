@@ -12,6 +12,7 @@ function check_collision(x, y)
   return fget(cell_n, flag_collision)
 end
 
+
 -->8
 -- object
 -- https://github.com/eevee/klinklang/blob/23c5715bda87f3c787e1c5fe78f30443c7bf3f56/object.lua (modified)
@@ -64,7 +65,9 @@ function _machine()
   local stack = {}
 
   function fire_up(ev)
-    foreach(stack, function(h) _method(h, ev) end)
+    for i=1, #stack do
+      _method(stack[i], ev)
+    end
   end
 
   function fire_down(ev)
@@ -118,6 +121,25 @@ c_indigo=13
 c_pink=14
 c_peach=15
 
+-- darkened colors
+drk = {
+  [0]=0, -- black      -> black
+  0,     -- darkblue   -> black
+  1,     -- darkpurple -> darkblue
+  1,     -- darkgreen  -> darkblue
+  2,     -- brown      -> darkpurple
+  1,     -- darkgrey   -> darkblue
+  5,     -- lightgrey  -> darkgrey
+  6,     -- white      -> lightgrey
+  2,     -- red        -> darkpurple
+  4,     -- orange     -> brown
+  9,     -- yellow     -> orange
+  3,     -- green      -> darkgreen
+  1,     -- blue       -> darkblue
+  1,     -- indigo     -> darkblue
+  2,     -- pink       -> darkpurple
+  5,     -- peach      -> darkgrey
+}
 
 -- buttons
 b_left = 0
@@ -304,7 +326,7 @@ function world()
       end
 
       if btnp(4) then
-        game.push(menu())
+        game.push(fade_out())
       end
 
       if btnp(5) then
@@ -343,8 +365,65 @@ function menu()
 
     update = function()
       if btnp(4) or btnp(5) then
-        game:pop()
+        game.pop()
       end
+      return true
+    end,
+  }
+end
+
+function fade_out(next)
+  local frame = 0
+  local shades = {[0]=0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+  return {
+    draw = function()
+      for j=0, 15 do
+        pal(j, shades[j], 1)
+      end
+    end,
+
+    update = function()
+      frame += 1
+
+      for j=0, 15 do
+        shades[j] = drk[shades[j]]
+      end
+
+      if frame == 6 then
+        game.pop()
+        game.push(next or fade_in())
+      end
+
+      return true
+    end,
+  }
+end
+
+function fade_in()
+  local frame = 0
+  local faded = 6
+
+  return {
+    draw = function()
+      local shades = {[0]=0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+      for i=1, faded do
+        for j=0, 15 do
+          shades[j] = drk[shades[j]]
+        end
+      end
+
+      for j=0, 15 do
+        pal(j, shades[j], 1)
+      end
+    end,
+
+    update = function()
+      faded -= 1
+
+      if faded == -1 then
+        game.pop()
+      end
+
       return true
     end,
   }
