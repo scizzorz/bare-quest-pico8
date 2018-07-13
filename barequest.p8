@@ -284,15 +284,23 @@ hero_anims = {
   walk_left = 120,
 }
 
+hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
+hero.x = 60
+hero.y = 188
+hero:set_anim("walk_down")
+hero.dir = "down"
+
+room = 1
+rooms = {
+  {x=0, y=16, w=16, h=16},
+}
+
+teleports = {
+}
+
 camera_x, camera_y = 0, 0
 
 function world()
-  local hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
-  hero.x = 60
-  hero.y = 188
-  hero:set_anim("walk_down")
-  hero.dir = "down"
-
   local splosions = {}
 
   return {
@@ -340,7 +348,13 @@ function world()
       cls()
       pal()
 
-      camera_x, camera_y = max(0, min(hero.x - 60, 897)), max(0, min(hero.y - 60, 385))
+      local cur_room = rooms[room]
+      local l = cur_room.x * 8
+      local r = l + cur_room.w * 8
+      local t = cur_room.y * 8
+      local b = t + cur_room.h * 8
+
+      camera_x, camera_y = max(l, min(hero.x - 60, r - 128)), max(t, min(hero.y - 60, b - 128))
       camera(camera_x, camera_y)
       map(0, 0, 0, 0, 128, 64)
       tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
