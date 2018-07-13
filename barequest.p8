@@ -326,7 +326,7 @@ function world()
       end
 
       if btnp(4) then
-        game.push(fade_out())
+        game.push(fade_out(teleport(60, 188)))
       end
 
       if btnp(5) then
@@ -429,11 +429,30 @@ function fade_in()
   }
 end
 
+function teleport(to_x, to_y, next)
+  return {
+    draw = function()
+      for j=0, 15 do
+        pal(j, c_black, 1)
+      end
+    end,
+
+    update = function()
+      hero.x = to_x
+      hero.y = to_y
+      game.pop()
+      game.push(next or fade_in())
+      return true
+    end
+  }
+end
+
 game = _machine()
 game.push(world())
 
 function _draw() game.draw() end
 function _update() game.update() end
+
 __gfx__
 00000000555555555555555500444400555555555555555500000070000000000066660033333000000033333333300000000000000033330000000000000000
 00000000555955555555a5550499994055555599995555550944477700666b60067bb76033300447474000333330044444444444444000330000000000000000
