@@ -1,112 +1,8 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
-
--- helpers
-function flr8(v)
-  return flr(v / 8)
-end
-
-function check_flag(x, y, flag)
-  local cell_n = mget(flr8(x), flr8(y))
-  return fget(cell_n, flag)
-end
-
-function check_collision(x, y)
-  return check_flag(x, y, flag_collision)
-end
-
-
--->8
--- object
--- https://github.com/eevee/klinklang/blob/23c5715bda87f3c787e1c5fe78f30443c7bf3f56/object.lua (modified)
-
-_object = {}
-_object.__index = _object
-
-
--- constructor
-function _object:__call(...)
-  local this = setmetatable({}, self)
-  return this, this:init(...)
-end
-
-
--- methods
-function _object:init() end
-function _object:update() end
-function _object:draw() end
-
-
--- subclassing
-function _object:extend()
-  proto = {}
-
-  -- copy meta values, since lua
-  -- doesn't walk the prototype
-  -- chain to find them
-  for k, v in pairs(self) do
-    if sub(k, 1, 2) == "__" then
-      proto[k] = v
-    end
-  end
-
-  proto.__index = proto
-  proto.__super = self
-
-  return setmetatable(proto, self)
-end
-
-
--->8
--- state machine
-
-function _method(h, k)
-  return h[k] and h[k](h)
-end
-
-function _machine()
-  local stack = {}
-
-  function fire_up(ev)
-    for i=1, #stack do
-      _method(stack[i], ev)
-    end
-  end
-
-  function fire_down(ev)
-    for i=#stack, 1, -1 do
-      if _method(stack[i], ev) then
-        break
-      end
-    end
-  end
-
-  return {
-    fire_up = fire_up,
-    fire_down = fire_down,
-    update = function() fire_down('update') end,
-    draw = function() fire_up('draw') end,
-    pop = function() stack[#stack] = nil end,
-    push = function(k) add(stack, k) end,
-  }
-end
-
--->8
--- thick print
-
-function tprint(text, x, y, ic, oc)
-  for ox=-1, 1 do
-    for oy=-1, 1 do
-      print(text, x + ox, y + oy, oc)
-    end
-  end
-
-  print(text, x, y, ic)
-end
-
--->8
 -- enums
+
 -- colors
 c_black=0
 c_darkblue=1
@@ -160,7 +56,103 @@ flag_collision = 0
 flag_portal = 1
 
 
+
 -->8
+-- systems
+
+-- https://github.com/eevee/klinklang/blob/23c5715bda87f3c787e1c5fe78f30443c7bf3f56/object.lua (modified)
+_object = {}
+_object.__index = _object
+
+-- constructor
+function _object:__call(...)
+  local this = setmetatable({}, self)
+  return this, this:init(...)
+end
+
+-- methods
+function _object:init() end
+function _object:update() end
+function _object:draw() end
+
+-- subclassing
+function _object:extend()
+  proto = {}
+
+  -- copy meta values, since lua
+  -- doesn't walk the prototype
+  -- chain to find them
+  for k, v in pairs(self) do
+    if sub(k, 1, 2) == "__" then
+      proto[k] = v
+    end
+  end
+
+  proto.__index = proto
+  proto.__super = self
+
+  return setmetatable(proto, self)
+end
+
+function _method(h, k)
+  return h[k] and h[k](h)
+end
+
+function _machine()
+  local stack = {}
+
+  function fire_up(ev)
+    for i=1, #stack do
+      _method(stack[i], ev)
+    end
+  end
+
+  function fire_down(ev)
+    for i=#stack, 1, -1 do
+      if _method(stack[i], ev) then
+        break
+      end
+    end
+  end
+
+  return {
+    fire_up = fire_up,
+    fire_down = fire_down,
+    update = function() fire_down('update') end,
+    draw = function() fire_up('draw') end,
+    pop = function() stack[#stack] = nil end,
+    push = function(k) add(stack, k) end,
+  }
+end
+
+-->8
+-- helpers
+function flr8(v)
+  return flr(v / 8)
+end
+
+function check_flag(x, y, flag)
+  local cell_n = mget(flr8(x), flr8(y))
+  return fget(cell_n, flag)
+end
+
+function check_collision(x, y)
+  return check_flag(x, y, flag_collision)
+end
+
+function tprint(text, x, y, ic, oc)
+  for ox=-1, 1 do
+    for oy=-1, 1 do
+      print(text, x + ox, y + oy, oc)
+    end
+  end
+
+  print(text, x, y, ic)
+end
+
+-->8
+-- entities
+
 -- animations
 _anim = _object:extend()
 
@@ -196,8 +188,6 @@ function _anim:copy()
   return _anim(self.frames)
 end
 
-
--->8
 -- sprites
 _sprite = _object:extend()
 
@@ -231,6 +221,7 @@ function _sprite:set_anim(to)
   end
 end
 
+-- pixel explosions
 function _splosion(sx, sy, tile, trans)
   local particles = {}
   local bx = (tile % 16) * 8
@@ -276,7 +267,7 @@ function _splosion(sx, sy, tile, trans)
 end
 
 -->8
--- gameplay
+-- game config
 
 hero_anims = {
   idle_down = 72,
@@ -288,12 +279,6 @@ hero_anims = {
   walk_right = 104,
   walk_left = 120,
 }
-
-hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
-hero.x = 60
-hero.y = 188
-hero:set_anim("walk_down")
-hero.dir = "down"
 
 room_town = 9
 room_d1_f1 = 1
@@ -323,6 +308,16 @@ portals = {
   {x=40, y=15, to_x=56, to_y=14, to_room=room_d1_f4},
   {x=56, y=15, to_x=40, to_y=14, to_room=room_d1_f3},
 }
+
+-->8
+-- game play
+
+hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
+hero.x = 60
+hero.y = 188
+hero:set_anim("walk_down")
+hero.dir = "down"
+
 
 camera_x, camera_y = 0, 0
 
