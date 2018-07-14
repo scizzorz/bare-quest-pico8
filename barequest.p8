@@ -463,11 +463,9 @@ function world()
 
       clip()
 
-      tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
-
-      tprint(flr(stat(1) * 100) .. '%', camera_x + 16, camera_y + 1, c_white, c_black)
-
-      tprint(light, camera_x + 36, camera_y + 1, c_white, c_black)
+      tprint(stat(7) .. 'fps', camera_x + 1, camera_y + 1, c_white, c_black)
+      tprint('c' .. flr(stat(1) * 100) .. '%', camera_x + 28, camera_y + 1, c_white, c_black)
+      tprint('m' .. flr(stat(2) / 20.48) .. '%', camera_x + 56, camera_y + 1, c_white, c_black)
     end,
   }
 end
