@@ -390,18 +390,8 @@ function world()
         end
       end
 
-      if btnp(b_o) then
-        if light >= 32 then
-          set_light(nil)
-        elseif light == nil then
-          set_light(8)
-        else
-          set_light(light + 4)
-        end
-      end
-
       if btnp(b_x) then
-        -- add(splosions, _splosion(hero.x, hero.y, hero.tile, c_red))
+        add(splosions, _splosion(hero.x, hero.y, hero.tile, c_red))
       end
 
       hero:update()
