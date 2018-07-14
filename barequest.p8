@@ -55,6 +55,12 @@ b_pause = 6
 flag_collision = 0
 flag_portal = 1
 
+-- memory locs
+
+screen = 0x6000
+shading_table = 0x4300
+
+
 
 
 -->8
@@ -317,6 +323,7 @@ hero.x = 60
 hero.y = 188
 hero:set_anim("walk_down")
 hero.dir = "down"
+light = 32
 
 
 camera_x, camera_y = 0, 0
@@ -387,15 +394,43 @@ function world()
       camera_x, camera_y = max(l, min(hero.x - 60, r - 128)), max(t, min(hero.y - 60, b - 128))
       camera(camera_x, camera_y)
       map(0, 0, 0, 0, 128, 64)
-      tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
-
-      tprint(flr(stat(1) * 100) .. '%', camera_x + 16, camera_y + 1, c_white, c_black)
 
       hero:draw()
+
+      local hx = flr8(hero.x)
+      local hy = flr8(hero.y)
+      local shades = {[0]=0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}
+      for x=1, 0 do
+
+        clip(hero.x + 8 - 8 * x, hero.y + 8 - 8 * x, hero.x + 8 * x, hero.y + 8 * x)
+        for j=0, 15 do
+          shades[j] = drk[shades[j]]
+          pal(j, shades[j], 1)
+        end
+
+      end
+
+      for x=0, 63 do
+        for y=0, 127 do
+          local addr = 0x6000 + x + y * 64
+          local dst_x = abs(x * 2 - hero.x - 4 + camera_x)
+          local dst_y = abs(y - hero.y - 4 + camera_y)
+          local dst = dst_x + dst_y
+          local shades = flr8(max(0, dst - light))
+          for i=1, shades do
+            poke(addr, peek(bor(shading_table, peek(addr))))
+          end
+        end
+      end
+
 
       for splosion in all(splosions) do
         splosion:draw()
       end
+
+      tprint(stat(7), camera_x + 1, camera_y + 1, c_white, c_black)
+
+      tprint(flr(stat(1) * 100) .. '%', camera_x + 16, camera_y + 1, c_white, c_black)
     end,
   }
 end
@@ -495,6 +530,14 @@ end
 game = _machine()
 game.push(world())
 
+function _init()
+  -- initialize shade colors
+  for x=0, 255 do
+    local left_color = band(x, 0xF)
+    local right_color = band(lshr(x, 4), 0xF)
+    poke(bor(shading_table, x), shl(drk[right_color], 4) + drk[left_color])
+  end
+end
 function _draw() game.draw() end
 function _update() game.update() end
 
