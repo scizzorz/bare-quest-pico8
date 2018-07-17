@@ -197,11 +197,11 @@ end
 -- sprites
 _sprite = _object:extend()
 
-function _sprite:init(anims, palette)
+function _sprite:init(anims, palette, x, y)
   self.anims = anims
   self.palette = palette
-  self.x = 0
-  self.y = 0
+  self.x = x or 0
+  self.y = y or 0
 end
 
 function _sprite:draw()
@@ -225,6 +225,39 @@ function _sprite:set_anim(to)
     self.tile = self.anim
     self.anim = nil
   end
+end
+
+function _sprite:dmove(dx, dy)
+  self.x += dx
+  self.y += dy
+end
+
+function _sprite:move(to_x, to_y)
+  self.x = to_x
+  self.y = to_y
+end
+
+-- dest sprite
+_dsprite = _sprite:extend()
+
+function _dsprite:init(anims, palette, x, y)
+  self.__super.init(self, anims, palette, x, y)
+  self.tx = x
+  self.ty = y
+end
+
+function _dsprite:dmove(dx, dy)
+  self.tx += dx
+  self.ty += dy
+end
+
+function _dsprite:move(to_x, to_y)
+  self.tx = to_x
+  self.ty = to_y
+end
+
+function _dsprite:is_ok()
+  return self.x == self.tx and self.y == self.ty
 end
 
 -- pixel explosions
@@ -340,9 +373,7 @@ portals = {
 -->8
 -- game play
 
-hero = _sprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end)
-hero.x = 60
-hero.y = 188
+hero = _dsprite(hero_anims, function() palt(c_black, false) palt(c_red, true) end, 56, 184)
 hero:set_anim("walk_down")
 hero.dir = "down"
 
@@ -353,41 +384,56 @@ function world()
 
   return {
     update = function()
-      if btn(b_left) then
-        if not check_collision(hero.x - 1, hero.y) and not check_collision(hero.x - 1, hero.y + 7) then
-          hero.x -= 1
-        end
-        hero:set_anim("walk_left")
-        hero.dir = "left"
-      elseif btn(b_right) then
-        if not check_collision(hero.x + 8, hero.y) and not check_collision(hero.x + 8, hero.y + 7) then
-          hero.x += 1
-        end
-        hero:set_anim("walk_right")
-        hero.dir = "right"
-      elseif btn(b_up) then
-        if not check_collision(hero.x, hero.y - 1) and not check_collision(hero.x + 7, hero.y - 1) then
-          hero.y -= 1
-        end
-        hero:set_anim("walk_up")
-        hero.dir = "up"
-      elseif btn(b_down) then
-        if not check_collision(hero.x, hero.y + 8) and not check_collision(hero.x + 7, hero.y + 8) then
-          hero.y += 1
-        end
-        hero:set_anim("walk_down")
-        hero.dir = "down"
-      else
-        hero:set_anim("idle_" .. hero.dir)
-      end
+      if hero:is_ok() then
+        local hx = hero.x + 4
+        local hy = hero.y + 4
 
-      if check_flag(hero.x + 4, hero.y + 4, flag_portal) then
-        for portal in all(portals) do
-          if portal.x == flr8(hero.x + 4) and portal.y == flr8(hero.y + 4) then
-            game.push(fade_out(teleport(portal.to_x * 8, portal.to_y * 8, portal.to_room)))
-            return true
+        if check_flag(hx, hy, flag_portal) then
+          for portal in all(portals) do
+            if portal.x == flr8(hero.x + 4) and portal.y == flr8(hero.y + 4) then
+              game.push(fade_out(teleport(portal.to_x * 8, portal.to_y * 8, portal.to_room)))
+              return true
+            end
           end
         end
+
+        if btn(b_left) then
+          if not check_collision(hx - 8, hy) then
+            hero:dmove(-8, 0)
+          end
+        elseif btn(b_right) then
+          if not check_collision(hx + 8, hy) then
+            hero:dmove(8, 0)
+          end
+        elseif btn(b_up) then
+          if not check_collision(hx, hy - 8) then
+            hero:dmove(0, -8)
+          end
+        elseif btn(b_down) then
+          if not check_collision(hx, hy + 8) then
+            hero:dmove(0, 8)
+          end
+        end
+      end
+
+      if not hero:is_ok() then
+        if hero.tx < hero.x then
+          hero.x -= 1
+          hero.dir = "left"
+        elseif hero.tx > hero.x then
+          hero.x += 1
+          hero.dir = "right"
+        elseif hero.ty < hero.y then
+          hero.y -= 1
+          hero.dir = "up"
+        elseif hero.ty > hero.y then
+          hero.y += 1
+          hero.dir = "down"
+        end
+
+        hero:set_anim("walk_" .. hero.dir)
+      else
+        hero:set_anim("idle_" .. hero.dir)
       end
 
       if btnp(b_x) then
@@ -552,6 +598,7 @@ function teleport(to_x, to_y, to_room, next)
     end,
 
     update = function()
+      hero:move(to_x, to_y)
       hero.x = to_x
       hero.y = to_y
       room = to_room
