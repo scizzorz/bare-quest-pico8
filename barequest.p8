@@ -470,12 +470,11 @@ function world()
       if light > 0 then
         local hx = camera_x - hero.x - 3
         local hy = camera_y - hero.y - 3
-        local max_clip_x = min(63, (clip_x + clip_s) / 2)
+        local max_clip_x = min(64, (clip_x + clip_s) / 2)
         local max_clip_y = min(127, clip_y + clip_s)
 
         -- this doesn't perfectly shade horizontal pixels
-        -- ...which normally isn't too much of an issue,
-        -- except near the right edge it's hideous
+        -- ...which normally isn't too much of an issue
         for x=clip_x / 2, max_clip_x  do
           local lsq = light_sq + rnd(16)
           for y=clip_y, max_clip_y do
